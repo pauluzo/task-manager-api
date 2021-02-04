@@ -11,8 +11,8 @@ const detailsSchema = new Schema({
 
 const userSchema = new Schema({
   user_details: {type: detailsSchema, required: true},
-  updates: [],
   tasks: [{type: Schema.Types.ObjectId, ref: 'Task'}],
+  token: {type: String, required: true},
 }, {
   timestamps: true
 });

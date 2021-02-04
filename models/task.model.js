@@ -6,8 +6,10 @@ const taskSchema = new Schema({
   task_description: {type: String, required: true},
   reminder_interval: {type: String, required: true},
   due_date: {type: Date, required: true},
+  set_date: {type: Date, required: true},
   status: {type: String, required: true},
-  user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'}
+  user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+  timer_id: {type: Number}
 }, {
   timestamps: true
 });

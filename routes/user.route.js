@@ -3,12 +3,12 @@ const router = express.Router();
 const UserModel = require("../models/user.model");
 
 router.get('/:id', async (req, res) => {
-  const userId = req.params.id;
-
   try {
+    const userId = req.params.id;
     const userData = await UserModel.findById(userId);
-    userData.populate('active_tasks completed_tasks expired_tasks');
-    res.status(200).json(userData);
+    const populatedData = userData.populate('tasks');
+    
+    res.status(200).json(populatedData);
   } catch(error) {
     console.log('Error occured:', error);
     res.status(400).send(`An error occured: ${error}`);
@@ -16,9 +16,10 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const userData = new UserModel(req.body);
-  
   try {
+    const body = req.body;
+    const data = {...body, task: []};
+    const userData = new UserModel(data);
     console.log(userData);
 
     await userData.save();
@@ -30,17 +31,17 @@ router.post("/", async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const body = req.body
-  const userId = req.params.id;
-
   try {
+    const body = req.body
+    const userId = req.params.id;
     console.log(body);
     const userUpdate = await UserModel.findById(userId);
     const userDetails = await userUpdate.toObject().user_details;
     const newDetails = {...userDetails, ...body};
   
     console.log(`new details update: `, newDetails);
-     await userUpdate.updateOne(newDetails);
+    userUpdate.user_details = newDetails;
+    await userUpdate.save();
 
     console.log('Here\'s the update: ', userUpdate);
 
