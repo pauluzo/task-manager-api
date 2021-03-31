@@ -18,6 +18,7 @@
     "express": "^4.17.1",
     "firebase-admin": "^9.4.2",
     "helmet": "^3.22.0",
-    "mongoose": "^5.9.16"
+    "mongoose": "^5.9.16",
+    "rxjs": "^6.6.6"
   }
 }

@@ -3,17 +3,19 @@ const router = express.Router();
 
 const TaskModel = require('../models/task.model');
 const UserModel = require('../models/user.model');
-const timerModel = require('../models/timer.model');
 
 const {setTimer, editInterval, editTimeout, deleteTimers} = require("../logic/timerLogic");
 
 // post route for creating a new task for a user
-router.post('/:id', async (req, res) => {
-  const body = req.body;
-  const userId = req.params.id
+router.post('/', async (req, res) => {
+  const {postTask, userEmail} = req.body;
 
   try {
-    const validateData = new TaskModel({...body, user: userId});
+    const userData = await UserModel.findOne({"user_details.email" : userEmail}).lean().exec();
+    const userId = userData._id;
+    console.log('the user data & id is: ', userData, userId);
+    
+    const validateData = new TaskModel({...postTask, user: userId});
     const validateError = validateData.validateSync();
     if(validateError) throw Error(validateError);
 
@@ -32,23 +34,35 @@ router.post('/:id', async (req, res) => {
 
     await userById.save();
 
-    res.status(200).send(savedData);
-  } catch (error) {
-    console.log('Error occured: ' + error);
-    res.status(500).json(`Error occured: ${error}`);
+    const responseData = {
+      task_name : savedData.task_name,
+      task_description : savedData.task_description,
+      reminder_interval : savedData.reminder_interval,
+      due_date : savedData.due_date,
+      set_date : savedData.set_date,
+      status : savedData.status
+    }
+
+    res.status(200).send(responseData);
+  } catch (err) {
+    console.log('Error occured: ' + err);
+    res.status(500).json({error : 'Error occured: ' + err});
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/', async (req, res) => {
   // client should send only the necessary updated fields.
+  // data must contain the set-date.
   const body = req.body;
-  const id = req.params.id;
 
   try {
-    const task = await TaskModel.findById(id);
-    let taskUpdate = {...task.toObject(), ...body};
+    console.log('The task PUT router is called with data: ', body);
+    const task = await TaskModel.findOne({set_date : body.set_date}).lean().exec();
+    console.log('The task received is: ', task)
+    let taskUpdate = {...task, ...body};
+    console.log('The task retrieved and task update are: ', task, taskUpdate);
 
-    await task.updateOne(taskUpdate);
+    await TaskModel.findByIdAndUpdate(task._id, taskUpdate);
 
     if (body.due_date) {
       console.log('updated due date: ', body.due_date);
@@ -68,20 +82,28 @@ router.put('/:id', async (req, res) => {
       deleteTimers(taskUpdate);
     }
 
-    console.log('Does this wait for the async if conditionals?: ', taskUpdate);
+    const responseData = {
+      task_name : taskUpdate.task_name,
+      task_description : taskUpdate.task_description,
+      reminder_interval : taskUpdate.reminder_interval,
+      due_date : taskUpdate.due_date,
+      set_date : taskUpdate.set_date,
+      status : taskUpdate.status
+    }
 
-    res.status(200).json(task);
+    res.status(200).json(responseData);
 
-  } catch (error) {
-    res.status(404).send(`Error occured: ${error}`);
+  } catch (err) {
+    res.status(500).json({error : 'Error occured: ' + err});
   }
 });
 
-router.delete('/:id', async (req, res) => {
-  const id = req.params.id;
+router.delete('/', async (req, res) => {
+  const body = req.body;
 
   try {
-    const deletedTask = await TaskModel.findByIdAndDelete(id);
+    const task = await TaskModel.findOne({set_date : body.set_date}).lean().exec();
+    const deletedTask = await TaskModel.findByIdAndDelete(task._id);
     const userById = await UserModel.findByIdAndUpdate(deletedTask.user, {
       $pull: {tasks: deletedTask._id}
     }, {new: true});

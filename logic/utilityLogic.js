@@ -1,8 +1,93 @@
 const TaskModel = require('../models/task.model');
-const { getTimer, nullifyTImer } = require('../models/timer.model');
+const { getTimer, nullifyTImer, updateTimeout } = require('../models/timer.model');
 const clientNotification = require('./notify');
 
-// function to change the task status to "warning" on the database.
+function setTimeout_ (initialTimeout, isExpired, fn, timeout) {
+  try {
+    // const maxTimeout = Math.pow(2, 31) - 1;
+    const maxTimeout = 60000;
+
+    if (timeout < maxTimeout && initialTimeout === timeout) {
+      console.log(`first use-case executed: timeout < & timeout ===`);
+      // remove the initialTimeout  value, then call setTimeout with the arguments.
+      let args = [...arguments];
+      args.splice(0, 2);
+      return setTimeout.apply(undefined, args);
+    } else if(timeout < maxTimeout && initialTimeout !== timeout) {
+      console.log(`second use-case executed: timeout < & timeout !==`);
+      // get the task from arguments and query mongoose to get its timerId for update.
+      let args = [...arguments];
+      const task = args[5];
+      TaskModel.findById(task._id, (err, res) => {
+        if(err) return console.log(`Task data for taskId: ${task._id} not found.`);
+
+        args.splice(0, 2);
+        const timer_id = res.timer_id;
+        console.log(`setTimeout retrieved timer_id is: ${timer_id} for ${isExpired ? 'expiredTimeout' : 'warningTimeout'}`);
+        const newTimer = setTimeout.apply(undefined, args);
+        isExpired ? updateTimeout(timer_id, {expiredId: newTimer}) : updateTimeout(timer_id, {timeoutId: newTimer});
+      });
+    } else if (timeout > maxTimeout && initialTimeout === timeout) {
+      console.log(`third use-case executed: timeout > & timeout ===`);
+      let args = arguments;
+      args[3] -= maxTimeout;
+
+      return setTimeout(function () {
+        setTimeout_.apply(undefined, args);
+      }, maxTimeout)
+    } else if (timeout > maxTimeout && initialTimeout !== timeout) {
+      console.log(`fourth use-case executed: timeout > & timeout !==`);
+      let args = arguments;
+      args[3] -= maxTimeout;
+      const task = args[5];
+    
+      TaskModel.findById(task._id, (err, res) => {
+        if(err) return console.log(`Task data for taskId: ${task._id} not found.`);
+        
+        const timer_id = res.timer_id;
+        console.log(`setTimeout retrieved timer_id is: ${timer_id} for ${isExpired ? 'expiredTimeout' : 'warningTimeout'}`);
+        const newTimer = setTimeout(function () {
+          setTimeout_.apply(undefined, args);
+        }, maxTimeout)
+        isExpired ? updateTimeout(timer_id, {expiredId: newTimer}) : updateTimeout(timer_id, {timeoutId: newTimer});
+      });
+    }
+  } catch (err) {
+    console.log(`Error occured in the setTimeout_ function: ${err}`);
+    return 0;
+  }
+}
+
+function setInterval_ (initialInterval, fn, interval) {
+  const maxInterval = Math.pow(2, 31) - 1;
+
+  if(interval > maxInterval) {
+    let args = arguments;
+    args[2] -= maxInterval;
+
+    return setTimeout(function() {
+      setInterval_.call(undefined, args);
+    }, maxInterval);
+  }
+
+  // if remainder interval is less than max interval, add that to initial interval and run recursion again.
+  if(interval < maxInterval && initialInterval !== interval) {
+    const args = arguments;
+    const newInterval = initialInterval + interval;
+    let newArgs = [...args];
+    newArgs[2] = newInterval;
+    // ensure that the outstanding time interval is counted and notification is sent to frontend.
+    setTimeout.call(undefined, args);
+    // start another interval countdown for the task and return its id.
+    setInterval_.call(undefined, newArgs);
+  } else if(initialInterval < maxInterval && initialInterval === interval) {
+    let args = [...arguments];
+    args.splice(0, 1);
+    return setInterval.call(undefined, args);
+  }
+}
+
+// function to update the task status on the database.
 const updateDatabase = async (getPayload, task, cancelTimers) => {
   try {
     console.log('update database taskId', task._id);
@@ -10,10 +95,12 @@ const updateDatabase = async (getPayload, task, cancelTimers) => {
     const dataObject = taskData.toObject();
     const payload = getPayload(dataObject);
       
+    // taskData-populate to update status and send client notification.
     taskData.populate('user', 'token', (err, task) => {
       let userToken;
       if(err) throw Error(err);
       userToken = task.user.toObject().token;
+      // find by Id and update, if the data already exists/saved on database.
       TaskModel.findById(task._id, (err, data) => {
         if(err) {
           return console.error('Taskmodel findbyId failed: ', err);
@@ -24,7 +111,7 @@ const updateDatabase = async (getPayload, task, cancelTimers) => {
           }).catch(err => {
             console.error('Data save was UNSUCCESSFUL: ', err);
           });
-        } else console.log('Task find did not retrieve any result');
+        } else console.log('Task find did not retrieve any result', data);
       });
 
       clientNotification(userToken, payload);
@@ -44,7 +131,7 @@ const updateDatabase = async (getPayload, task, cancelTimers) => {
   } catch (error) {
     console.log('Update database error occured', error);
   }
-}
+} 
 
 const setExpiredTimeout = (task) => {
   try {
@@ -77,7 +164,7 @@ const setExpiredTimeout = (task) => {
       console.log('Cancel timers, is nullified has a value of: ', isNullified);
     }
 
-    timeoutId = setTimeout(updateDatabase, timeout, getPayload, task, cancelTimers);
+    timeoutId = setTimeout_(timeout, true, updateDatabase, timeout, getPayload, task, cancelTimers);
     console.log('expired timeout Id: ', timeoutId);
     return timeoutId;
   } catch (error) {
@@ -117,7 +204,7 @@ const setWarningTimeout = (task) => {
     if (warningDate > currentDate) {
       const timeout = warningDate - currentDate;
       console.log('Timeout in milliseconds: ', timeout);
-      timeoutId = setTimeout(updateDatabase, timeout, getPayload, task)
+      timeoutId = setTimeout_(timeout, false, updateDatabase, timeout, getPayload, task)
     } else {
       const timeout = currentDate - warningDate;
       console.log('Warning date had passed, before setTimeout was called.', timeout);

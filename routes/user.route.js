@@ -2,10 +2,11 @@ const express = require("express");
 const router = express.Router();
 const UserModel = require("../models/user.model");
 
-router.get('/:id', async (req, res) => {
+router.get('/', async (req, res) => {
+  const body = req.body;
   try {
-    const userId = req.params.id;
-    const userData = await UserModel.findById(userId);
+    const userEmail = body.email;
+    const userData = await UserModel.findOne({"user_details.email" : userEmail}).lean().exec();
     const populatedData = userData.populate('tasks');
     
     res.status(200).json(populatedData);
@@ -30,12 +31,12 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/', async (req, res) => {
   try {
     const body = req.body
-    const userId = req.params.id;
+    const userEmail = body.email;
     console.log(body);
-    const userUpdate = await UserModel.findById(userId);
+    const userUpdate = await UserModel.findOne({"user_details.email" : userEmail}).lean().exec();
     const userDetails = await userUpdate.toObject().user_details;
     const newDetails = {...userDetails, ...body};
   
