@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const UserModel = require("../models/user.model");
 const TaskModel = require("../models/task.model");
-const { populate } = require("../models/user.model");
 
 router.get('/', async (req, res) => {
   const body = req.body;
