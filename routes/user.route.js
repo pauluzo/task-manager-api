@@ -72,9 +72,8 @@ router.put('/', async (req, res) => {
 
 router.delete('/', async (req, res) => {
   try {
-    const userEmail = req.body.email;
+    const userEmail = req.data.email;
     console.log('User Email is ', userEmail);
-    // TODO: Get and delete a user and all its associated tasks. (Delete multiple tasks at once)
     const deletedUser = await UserModel.findOneAndDelete({
       "user_details.email" : userEmail
     });

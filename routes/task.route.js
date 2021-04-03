@@ -99,10 +99,10 @@ router.put('/', async (req, res) => {
 });
 
 router.delete('/', async (req, res) => {
-  const body = req.body;
+  const data = req.data;
 
   try {
-    const task = await TaskModel.findOne({set_date : body.set_date}).lean().exec();
+    const task = await TaskModel.findOne({set_date : data.set_date}).lean().exec();
     const deletedTask = await TaskModel.findByIdAndDelete(task._id);
     const userById = await UserModel.findByIdAndUpdate(deletedTask.user, {
       $pull: {tasks: deletedTask._id}
