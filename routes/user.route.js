@@ -4,10 +4,10 @@ const UserModel = require("../models/user.model");
 const TaskModel = require("../models/task.model");
 
 router.get('/', async (req, res) => {
-  const body = req.body;
+  const email = req.query.email;
+  
   try {
-    const userEmail = body.email;
-    const populatedData = await UserModel.findOne({"user_details.email" : userEmail}).populate('tasks');
+    const populatedData = await UserModel.findOne({"user_details.email" : email}).populate('tasks');
     console.log('populated data is: ', populatedData);
     const responseData = {
       tasks : populatedData.tasks,
