@@ -5,9 +5,10 @@ const TaskModel = require('../models/task.model');
 const UserModel = require('../models/user.model');
 
 const {setTimer, editInterval, editTimeout, deleteTimers} = require("../logic/timerLogic");
+const { verifyToken } = require('../utils/auth');
 
 // post route for creating a new task for a user
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   const {postTask, userEmail} = req.body;
 
   try {
@@ -50,7 +51,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', verifyToken, async (req, res) => {
   // client should send only the necessary updated fields.
   // data must contain the set-date.
   const body = req.body;
@@ -76,7 +77,7 @@ router.put('/', async (req, res) => {
       console.log('Interval id was changed successfully. ', interval_id);
     }
 
-    // write if conditional for when the task is completed.
+    // conditional for when the task is completed.
     if(body.status && body.status === 'completed') {
       console.log('this task has been completed successfully.');
       deleteTimers(taskUpdate);
@@ -98,8 +99,8 @@ router.put('/', async (req, res) => {
   }
 });
 
-router.delete('/', async (req, res) => {
-  const data = req.data;
+router.delete('/', verifyToken, async (req, res) => {
+  const data = req.data || req.body;
 
   try {
     const task = await TaskModel.findOne({set_date : data.set_date}).lean().exec();
