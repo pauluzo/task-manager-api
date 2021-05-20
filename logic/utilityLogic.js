@@ -242,9 +242,14 @@ const createInterval = async (task) => {
 
     console.log('Create interval user token is: ', userToken);
 
-    if (taskData.reminder_interval.includes('hour')) {
-      //TODO: change this back, to the needed formular for hours
-      interval = 60 * 60 * 5 * timeInteger;
+    if(taskData.reminder_interval.includes('test')) {
+      interval = 5000;
+      console.log('interval console', interval);
+      console.log('user token', userToken);
+      timerId = setInterval(clientNotification, interval, userToken, payload);
+    }
+    else if (taskData.reminder_interval.includes('hour')) {
+      interval = 1000 * 60 * 60 * timeInteger;
       console.log('interval console', interval);
       console.log('user token', userToken);
       timerId = setInterval(clientNotification, interval, userToken, payload);

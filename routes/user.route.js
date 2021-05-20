@@ -30,6 +30,10 @@ router.get('/', verifyToken, async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const {user_name, email, password} = req.body.user_details;
+    const userExists = await UserModel.findOne({"user_details.email" : email});
+
+    if(userExists._id) throw Error('User account already exists');
+
     const {hash, salt} = generatePassword(password);
     const postData = {
       token : req.body.token,
@@ -73,7 +77,7 @@ router.post('/login', async (req, res) => {
     const {user_name, hash, salt} = populatedData.user_details;
     const isUser = validatePassword(password, hash, salt);
 
-    if( isUser) {
+    if(isUser) {
       const auth_token = createToken(user_name, populatedData._id);
 
       return res.status(200).json({

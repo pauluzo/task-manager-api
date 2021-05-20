@@ -69,6 +69,9 @@ const deleteTimers = (task) => {
     if(objectIds === null) {
       console.log('The deleted timer returns a null object');
       return true;
+    } else if (objectIds === undefined || !objectIds) {
+      console.log('The deleted timer returns an undefined object');
+      return true;
     }
 
     const {intervalId, timeoutId, expiredId} = objectIds;
