@@ -65,6 +65,31 @@ router.put('/', verifyToken, async (req, res) => {
 
     await TaskModel.findByIdAndUpdate(task._id, taskUpdate);
 
+    if(taskUpdate.status === "expired") {
+      const timer_id = await setTimer(taskUpdate);
+      console.log('the returned timer is: ', timer_id);
+      const updateTimerId = await TaskModel.findByIdAndUpdate(taskUpdate._id, {timer_id, status: "active"}, {new: true}).lean().exec();
+      console.log('The timer-id and active status is changed.', updateTimerId);
+
+      const responseData = {
+        task_name : updateTimerId.task_name,
+        task_description : updateTimerId.task_description,
+        reminder_interval : updateTimerId.reminder_interval,
+        due_date : updateTimerId.due_date,
+        set_date : updateTimerId.set_date,
+        status : updateTimerId.status
+      }
+      return res.status(200).json(responseData);
+    } else if(taskUpdate.status === "warning") {
+      taskUpdate = {...taskUpdate, status: "active"};
+      await TaskModel.findByIdAndUpdate(taskUpdate._id, {status: "active"});
+      if(!body.due_date) {
+        console.log('Edited task is has warning status, but no due_date');
+        const timer_id = editTimeout(taskUpdate);
+        console.log('Timeout id was changed successfully. ', timer_id);
+      }
+    }
+
     if (body.due_date) {
       console.log('updated due date: ', body.due_date);
       const timer_id = editTimeout(taskUpdate);
@@ -95,6 +120,7 @@ router.put('/', verifyToken, async (req, res) => {
     res.status(200).json(responseData);
 
   } catch (err) {
+    console.log('error occured' + err);
     res.status(500).json({error : 'Error occured: ' + err});
   }
 });

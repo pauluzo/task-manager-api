@@ -139,17 +139,18 @@ const setExpiredTimeout = (task) => {
     const dueDate = Date.parse(task.due_date);
     const currentDate = Date.parse(new Date())
     const timeout = dueDate - currentDate;
+    if(timeout <= 0) throw Error('Cannot set a date in the past');
     console.log('expired timeout current date: ', currentDate, timeout);
 
     const getPayload = (dataObject) => {
       const payload = {
         notification: {
-          title: 'Expired Task Notification!',
+          title: 'Expired Task Notification'.toUpperCase(),
           body: `Your task ${dataObject.task_name} has expired, and is yet to be completed.
           \n Due Date: ${new Date(dataObject.due_date).toLocaleString()}`,
         },
         data: {
-          _id: dataObject._id.toString(),
+          set_date: dataObject.set_date.toISOString(),
           status: 'expired',        
         }
       }
@@ -188,13 +189,14 @@ const setWarningTimeout = (task) => {
     console.log('current date: ', new Date(currentDate).toLocaleString())
 
     const getPayload = (dataObject) => {
+      console.log("The warning task data object is: ", dataObject);
       const payload = {
         notification: {
-          title: 'Warning!! Task Reminder!',
-          body: `Task Warning! Your task ${dataObject.task_name} is set to be due soon! \n Due Date: ${new Date(dataObject.due_date).toLocaleString()}`,
+          title: 'Warning! Task Reminder'.toUpperCase(),
+          body: `Your task ${dataObject.task_name} is set to be due soon! \n Due Date: ${new Date(dataObject.due_date).toLocaleString()}`,
         },
         data: {
-          _id: dataObject._id.toString(),
+          set_date: dataObject.set_date.toISOString(),
           status: 'warning',        
         }
       }
@@ -204,11 +206,11 @@ const setWarningTimeout = (task) => {
     if (warningDate > currentDate) {
       const timeout = warningDate - currentDate;
       console.log('Timeout in milliseconds: ', timeout);
-      timeoutId = setTimeout_(timeout, false, updateDatabase, timeout, getPayload, task)
+      timeoutId = setTimeout_(timeout, false, updateDatabase, timeout, getPayload, task);
     } else {
       const timeout = currentDate - warningDate;
       console.log('Warning date had passed, before setTimeout was called.', timeout);
-      updateDatabase(getPayload, task);
+      setTimeout(updateDatabase, 5000, getPayload, task);
     }
     return timeoutId;
   } catch (error) {
@@ -220,7 +222,7 @@ const setWarningTimeout = (task) => {
 const createInterval = async (task) => {
   const payload = {
     notification: {
-      title: 'Task Reminder Notification',
+      title: 'Reminder Notification'.toUpperCase(),
       body: `Your task ${task.task_name} is set to be due on ${new Date(task.due_date).toLocaleString()}`
     }
   }
@@ -243,7 +245,8 @@ const createInterval = async (task) => {
     console.log('Create interval user token is: ', userToken);
 
     if(taskData.reminder_interval.includes('test')) {
-      interval = 5000;
+      interval = 20000;
+      console.log("Task data interval has a test value".toUpperCase());
       console.log('interval console', interval);
       console.log('user token', userToken);
       timerId = setInterval(clientNotification, interval, userToken, payload);
