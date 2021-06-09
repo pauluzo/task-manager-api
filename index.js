@@ -1,22 +1,36 @@
 const express = require("express");
-
-const task = {
-  _id: "5fe4095bfe8f83112ce92e2a",
-  task_name: "Write articles and contribute to open source daily",
-  task_description: "Conjure up write-ups for how to get things done in time.",
-  reminder_interval: "2 hours",
-  due_date: "2021-01-17T16:18:51.639Z",
-  set_date: "2021-01-13T12:15:37.639Z",
-  status: "active",
-  token: "5fe0c0dd19ea4f323c0b5d1a"
-}
-
+const { setTimer } = require("./logic/timerLogic");
+const TaskModel = require("./models/task.model");
 require("dotenv").config();
 const app = express();
 
 require("./config/prod")(app);
 require("./config/db")();
 require("./config/routes")(app);
+
+const setTaskTimers = async () => {
+  // Logic for app to get all tasks and re-assign timers to them.
+  const allTasks = await TaskModel.find({}).lean().exec();
+  console.log('Server was restarted, no of active tasks is: ', allTasks.length);
+
+  for (let index = 0; index < allTasks.length; index++) {
+    const taskData = allTasks[index];
+
+    if(taskData.status === "active" || taskData.status === "warning") {
+      taskData.timer_id = null;
+      const timer_id = await setTimer(taskData);
+      console.log('Server restart timer-id is: ', timer_id);
+      const updateTimerId = await TaskModel.findByIdAndUpdate(taskData._id, { timer_id }, {new: true}).lean().exec();
+      console.log('The timer-id is changed.', updateTimerId);
+    }
+  }
+}
+
+setTimeout(() => {
+  setTaskTimers().catch(err => {
+    console.log('Error occured in reseting timer: ' + err)
+  });
+}, 30000);
 
 let PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
