@@ -8,7 +8,7 @@ const {setTimer, editInterval, editTimeout, deleteTimers} = require("../logic/ti
 const { verifyToken } = require('../utils/auth');
 
 // post route for creating a new task for a user
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', async (req, res) => {
   const {postTask, userEmail} = req.body;
 
   try {

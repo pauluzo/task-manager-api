@@ -32,7 +32,7 @@ router.post("/", async (req, res) => {
     const {user_name, email, password} = req.body.user_details;
     const userExists = await UserModel.findOne({"user_details.email" : email});
 
-    if(userExists._id) throw Error('User account already exists');
+    if(userExists && userExists._id) throw Error('User account already exists');
 
     const {hash, salt} = generatePassword(password);
     const postData = {
@@ -74,6 +74,14 @@ router.post('/login', async (req, res) => {
 
   try {
     const populatedData = await UserModel.findOne({"user_details.email" : email}).populate('tasks');
+    
+    if(populatedData === null || !(populatedData._id)) {
+      console.log('the user email does not exist.', email);
+      return res.status(400).json({
+        error : "Invalid credentials. Please check credentials and try again" 
+      });
+    }
+
     const {user_name, hash, salt} = populatedData.user_details;
     const isUser = validatePassword(password, hash, salt);
 

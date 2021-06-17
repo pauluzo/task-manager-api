@@ -15,8 +15,13 @@ const setTaskTimers = async () => {
 
   for (let index = 0; index < allTasks.length; index++) {
     const taskData = allTasks[index];
+    const dueDate = new Date(taskData.due_date).getTime();
+    const timeNow = new Date().getTime();
 
-    if(taskData.status === "active" || taskData.status === "warning") {
+    if(
+      (taskData.status === "active" || taskData.status === "warning") &&
+      dueDate > timeNow
+    ) {
       taskData.timer_id = null;
       const timer_id = await setTimer(taskData);
       console.log('Server restart timer-id is: ', timer_id);
@@ -26,13 +31,15 @@ const setTaskTimers = async () => {
   }
 }
 
-setTimeout(() => {
+/**
+ * setTimeout(() => {
   setTaskTimers().catch(err => {
     console.log('Error occured in reseting timer: ' + err)
   });
-}, 30000);
+ }, 30000);
+ */
 
-let PORT = process.env.PORT || 5000;
+let PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} ⚙ 🔥`);
 });
